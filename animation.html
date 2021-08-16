@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <canvas id="glcanvas" width="1900" height="900"></canvas>
+    <script src="https://cdn.bootcdn.net/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <script>
+        const canvas = document.getElementById('glcanvas');
+        const gl = canvas.getContext('webgl');
+        let angles = 0;
+        let Tx = 0.0;
+        let Ty = 0.0;
+        let sx = 0.0;
+        let sy = 0.0;
+
+        const vertexShaderSource = `
+            attribute vec4 a_Position;
+            uniform mat4 u_Translation;
+            uniform mat4 u_xformMatrix;
+            uniform mat4 u_Size;
+            attribute vec2 a_texCoord;
+            varying vec2 v_texCoord;
+            void main(){
+             gl_Position = u_Translation * u_xformMatrix * u_Size * a_Position;
+             v_texCoord = a_texCoord;
+            }
+        `;
+
+        const fragmentShaderSource = `
+        precision mediump float;
+        varying vec2 v_texCoord;
+        uniform sampler2D u_texture;
+        void main(){
+            gl_FragColor = texture2D(u_texture, v_texCoord);
+            }
+        `;
+
+        const program = initShader(gl, vertexShaderSource, fragmentShaderSource);
+        const a_Position = gl.getAttribLocation(program, 'a_Position');
+        const a_texCoord = gl.getAttribLocation(program, 'a_texCoord');
+        const u_Translation = gl.getUniformLocation(program, 'u_Translation');
+        const u_xformMatrix = gl.getUniformLocation(program, 'u_xformMatrix');
+        const u_Size = gl.getUniformLocation(program, 'u_Size');
+
+        let data = [];
+        const r2 = 0.2;
+        const r1 = 0.1;
+        for (let i = 0; i < 10; i++) {
+            if (i % 2 === 0) {
+                data.push(r1 * Math.cos(i * (Math.PI / 5)), r1 * Math.sin(i * (Math.PI / 5)))
+            } else {
+                data.push(r2 * Math.cos(i * (Math.PI / 5)), r2 * Math.sin(i * (Math.PI / 5)))
+            }
+        }
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(a_Position);
+
+        let pointData = [];
+        for (let i = 0; i < 10; i++) {
+            if (i % 2 === 0) {
+                pointData.push(r1 * Math.cos(i * (Math.PI / 5)), r1 * Math.sin(i * (Math.PI / 5)))
+            } else {
+                pointData.push(r2 * Math.cos(i * (Math.PI / 5)), r2 * Math.sin(i * (Math.PI / 5)))
+            }
+        }
+        const buffers = gl.createBuffer();
+        let texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pointData), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(a_texCoord);
+        const img = new Image();
+        img.src = './dasima.png';
+        img.onload = function() {
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+            gl.drawArrays(gl.TRIANGLE_FAN, 0, 10);
+        };
+        // 这告诉WebGL如果纹理需要被缩小时，采用线性插值的方式来进行采样
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        // 这告诉WebGL如果纹理需要被方法时，采用线性插值的方式来进行采样
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        // 告诉WebGL如果纹理坐标超出了s坐标的最大/最小值，直接取边界值
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        // 告诉WebGL如果纹理坐标超出了t坐标的最大/最小值，直接取边界值
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+
+        function run() {
+            sx += 0.01;
+            sy += 0.01;
+            angles += 5;
+            Tx += 0.005;
+            Ty += 0.005;
+            // for (let i = 0;)
+
+
+            let radian = Math.PI * angles / 180.0;
+            let cosB = Math.cos(radian);
+            let sinB = Math.sin(radian);
+            const translation = new Float32Array([
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                Tx, Ty, 0.0, 1.0,
+            ]);
+            gl.uniformMatrix4fv(u_Translation, false, translation);
+            const xformMatrix = new Float32Array([
+                cosB, sinB, 0.0, 0.0, -sinB, cosB, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            ]);
+            gl.uniformMatrix4fv(u_xformMatrix, false, xformMatrix);
+            const size = new Float32Array([
+                sx, 0.0, 0.0, 0.0, 0.0, sy, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            ]);
+            gl.uniformMatrix4fv(u_Size, false, size);
+
+            for (let i = 0; i < 100; i++) {
+                gl.drawArrays(gl.TRIANGLE_FAN, 0, 10);
+            }
+
+            requestAnimationFrame(run)
+        };
+        run()
+
+
+        function initShader(gl, vertexShaderSource, fragmentShaderSource) {
+            const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+            gl.shaderSource(vertexShader, vertexShaderSource);
+            gl.shaderSource(fragmentShader, fragmentShaderSource);
+
+            gl.compileShader(vertexShader);
+            gl.compileShader(fragmentShader);
+
+            const program = gl.createProgram();
+
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader)
+
+            gl.linkProgram(program);
+            gl.useProgram(program);
+            return program;
+        };
+    </script>
+</body>
+
+</html>

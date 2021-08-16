@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <canvas id="glcanvas" width="800" height="800"></canvas>
+    <p>
+        <label>
+            <span>饱和度: </span>
+            <input type="checkbox" id="sat" />
+        </label>
+        <br />
+        <label>
+            value:
+            <input type="range" id="sat-value" defaultValue={0.1} min={-1} max={1} step={0.004} />
+        </label>
+    </p>
+    <script>
+        let canvas = document.getElementById('glcanvas');
+        let webgl = canvas.getContext('webgl');
+        let sat = document.getElementById('sat');
+        console.log(webgl);
+
+
+        const vsSource = `
+            precision mediump float;
+            attribute vec4 a_Position;
+            attribute vec4 inputTextureCoordinate;
+            varying vec2 textureCoordinate;
+
+            void main() {
+                gl_Position = a_Position;
+                textureCoordinate = vec2((a_Position.x + 1.0) / 2.0, 1.0 - (a_Position.y + 1.0) / 2.0);
+            }
+        `;
+
+        const fsSource = `
+            precision mediump float;
+            varying vec2 textureCoordinate;
+            uniform sampler2D inputImageTexture;
+            uniform float size;
+            uniform float saturation;
+            uniform float r; 
+            uniform float g;
+            uniform float b;
+            uniform float a;
+
+            void main() {
+                vec4 texture = texture2D(inputImageTexture, textureCoordinate);
+                texture.r += r;
+                texture.g += g;
+                texture.b += b;
+
+                //饱和度
+                float average = (texture.r + texture.g + texture.b) / 3.0;
+                if(saturation > 0.0) {
+                    texture.rgb += (average - texture.rgb) * (1.0 - 1.0 / (1.001 - saturation));
+                } else {
+                    texture.rgb += (average - texture.rgb) * (-saturation);
+                };
+                gl_FragColor = texture;
+            }
+        `;
+
+        const createShader = (gl, type, source) => {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                return shader;
+            }
+            gl.deleteShader(shader);
+        };
+
+        const createProgram = (gl, vShader, fShader) => {
+            const program = gl.createProgram();
+            gl.attachShader(program, vShader);
+            gl.attachShader(program, fShader);
+            gl.link(program);
+            if (gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                webgl.useProgram(program);
+                return program;
+            }
+            gl.deleteProgram(program);
+        };
+
+        const createTextureByImageObject = (gl, imgObject) => {
+            gl.activeTexture(gl.TEXTURE0);
+            const textureObject = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, textureObject);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgObject);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+            return textureObject;
+        };
+
+        const vertices = [
+            1.0, 1.0,
+            1.0, -1.0, -1.0, 1.0, -1.0, -1.0,
+        ];
+
+        const vShader = createShader(webgl, webgl.VERTEX_SHADER, vsSource),
+            fShader = createShader(webgl, webgl.FRAGMENT_SHADER, fsSource),
+            program = createProgram(webgl, vShader, fShader),
+            buffer = webgl.createBuffer();
+
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, buffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, new Float32Array(vertices), webgl.STATIC_DRAW);
+
+        let v4PositionIndex = webgl.getAttribLocation(program, "a_Position");
+        webgl.enableVertexAttribArray(v4PositionIndex);
+        webgl.vertexAttribPointer(v4PositionIndex, 2, webgl.FLOAT, false, 0, 0);
+
+        let img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = "../../dasima.png";
+        img.onload = function() {
+            document.body.append(img);
+            createTextureByImageObject(webgl, img);
+            let saturationUniform = webgl.getUniformLocation(program, "saturation");
+
+
+            const uniform = webgl.getUniformLocation(program, "inputImageTexture");
+            webgl.uniform1i(uniform, 0);
+            webgl.drawArrays(webgl.TRIANGLE_STRIP, 0, 4);
+
+            sat.addEventListener("change", function() {
+                const val = Number(sat.value) / 100;
+                webgl.uniform1f(saturationUniform, val);
+                webgl.drawArrays(webgl.TRIANGLE_STRIP, 0, 4);
+            });
+        };
+    </script>
+</body>
+
+</html>
