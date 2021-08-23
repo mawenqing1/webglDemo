@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>circle</title>
+</head>
+
+<body>
+    <canvas id="canvas" width="800" height="700"></canvas>
+    <script src="../parametric.js"></script>
+    <script>
+        const gl = document.getElementById('canvas').getContext('webgl');
+
+        const vsSource = `
+        attribute vec4 a_Position;
+
+        void main() {
+            gl_Position = a_Position;
+        }
+        `;
+
+        const fsSource = `
+        precision mediump float;
+
+        void main() {
+            gl_FragColor = vec4(1.0,1.0,1.0,1.0);
+        }
+        `;
+
+        const vsShader = createShader(gl.VERTEX_SHADER);
+        const fsShader = createShader(gl.FRAGMENT_SHADER);
+
+        gl.shaderSource(vsShader, vsSource);
+        gl.shaderSource(fsShader, fsSource);
+
+        gl.compileShader(vsShader);
+        gl.compileShader(fsShader);
+
+        if (!gl.getShaderParameter(vsShader, gl.COMPILE_STATUS)) {
+            console.error(`shader compile failed: ${gl.getShaderInfoLog(vsShader)}`);
+            gl.deleteShader(vsShader);
+        };
+
+        const program = createProgram();
+
+        gl.attachShader(program, vsShader);
+        gl.attachShader(program, fsShader);
+
+        gl.linkProgram(program);
+    </script>
+</body>
+
+</html>
