@@ -9,47 +9,107 @@
 </head>
 
 <body>
-    <canvas id="canvas" width="800" height="700"></canvas>
+    <canvas id="canvas" width="800" height="800"></canvas>
     <script src="../parametric.js"></script>
+    <script src="../MathLib2D.js"></script>
     <script>
-        const gl = document.getElementById('canvas').getContext('webgl');
+        // 阿基米德螺旋线
+        // const helical = parametric(
+        //     (t, l) => l * t * Math.cos(t),
+        //     (t, l) => l * t * Math.sin(t),
+        // );
+        // helical(0, 50, 500, 0.01).draw();
 
-        const vsSource = `
-        attribute vec4 a_Position;
+        // 圆
+        // const circle = parametric(
+        //     (t, r) => r * Math.cos(t),
+        //     (t, r) => r * Math.sin(t),
+        // );
+        // circle(0, Math.PI * 2, 100, 0.5).draw();
 
-        void main() {
-            gl_Position = a_Position;
-        }
-        `;
+        // 椭圆
+        // const ellipse = parametric(
+        //     (t, a, b) => a * Math.cos(t),
+        //     (t, a, b) => b * Math.sin(t),
+        // );
+        // ellipse(0, Math.PI * 2, 100, 0.6, 0.3).draw();
 
-        const fsSource = `
-        precision mediump float;
+        // 抛物线
+        // const para = parametric(
+        //     t => 0.25 * t,
+        //     t => 0.25 * t ** 2,
+        // );
+        // para(-5.5, 5.5).draw();
 
-        void main() {
-            gl_FragColor = vec4(1.0,1.0,1.0,1.0);
-        }
-        `;
+        // 星形线
+        // const star = parametric(
+        //     (t, l) => l * Math.cos(t) ** 3,
+        //     (t, l) => l * Math.sin(t) ** 3
+        // );
+        // star(0, Math.PI * 2, 50, 0.5).draw();
 
-        const vsShader = createShader(gl.VERTEX_SHADER);
-        const fsShader = createShader(gl.FRAGMENT_SHADER);
+        // 二阶贝塞尔曲线
+        // const quadricBrezier = parametric(
+        //     (t, [{
+        //         x: x0
+        //     }, {
+        //         x: x1
+        //     }, {
+        //         x: x2
+        //     }]) => (1 - t) ** 2 * x0 + 2 * t * (1 - t) * x1 + t ** 2 * x2,
+        //     (t, [{
+        //         y: y0
+        //     }, {
+        //         y: y1
+        //     }, {
+        //         y: y2
+        //     }]) => (1 - t) ** 2 * y0 + 2 * t * (1 - t) * y1 + t ** 2 * y2,
+        // );
+        // const p0 = new MathLib2D(0.0);
+        // const p1 = new MathLib2D(100, 0);
+        // p1.rotate(0.75);
+        // const p2 = new MathLib2D(200, 0);
+        // const count = 30;
+        // for (let i = 0; i < count; i++) {
+        //     p1.rotate(2 / count * Math.PI);
+        //     p2.rotate(2 / count * Math.PI);
+        //     quadricBrezier(0, 1, 100, [p0, p1, p2]).draw();
+        // };
 
-        gl.shaderSource(vsShader, vsSource);
-        gl.shaderSource(fsShader, fsSource);
-
-        gl.compileShader(vsShader);
-        gl.compileShader(fsShader);
-
-        if (!gl.getShaderParameter(vsShader, gl.COMPILE_STATUS)) {
-            console.error(`shader compile failed: ${gl.getShaderInfoLog(vsShader)}`);
-            gl.deleteShader(vsShader);
+        // 三阶贝塞尔曲线
+        const cubicBezier = parametric(
+            (t, [{
+                x: x0
+            }, {
+                x: x1
+            }, {
+                x: x2
+            }, {
+                x: x3
+            }]) => (1 - t) ** 3 * x0 + 3 * (1 - t) ** 2 * t * x1 + 3 * (1 - t) ** 2 * x2 + t ** 3 * x3,
+            (t, [{
+                y: y0
+            }, {
+                y: y1
+            }, {
+                y: y2
+            }, {
+                y: y3
+            }]) => (1 - t) ** 3 * y0 + 3 * (1 - t) ** 2 * t * y1 + 3 * (1 - t) ** 2 * y2 + t ** 3 * y3,
+        );
+        const p0 = new MathLib2D(0, 0);
+        const p1 = new MathLib2D(100, 0);
+        p1.rotate(0.75);
+        const p2 = new MathLib2D(150, 0);
+        p2.rotate(-0.75);
+        const p3 = new MathLib2D(200, 0);
+        const count = 30;
+        for (let i = 0; i < count; i++) {
+            p1.rotate(2 / count * Math.PI);
+            p2.rotate(2 / count * Math.PI);
+            p3.rotate(2 / count * Math.PI);
+            cubicBezier(0, 1, 100, [p0, p1, p2, p3]).draw();
         };
-
-        const program = createProgram();
-
-        gl.attachShader(program, vsShader);
-        gl.attachShader(program, fsShader);
-
-        gl.linkProgram(program);
     </script>
 </body>
 
